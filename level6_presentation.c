@@ -1,1 +1,0 @@
-#include "livello7_application.h"

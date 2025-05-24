@@ -1,9 +1,23 @@
+/* C-ISO-OSI - Presentation layer - Functions
+
+    - Responsible for data translation, encryption, and compression.
+    - Converts data from the application layer into a common format for transmission.
+    - Implements encoding/decoding schemes (e.g., ASCII, EBCDIC, encryption, compression).
+    - Ensures that data sent from the application layer of one system can be read by the application layer of another.
+
+    Takes data from the session layer, applies the selected encoding/decoding (e.g., ROT13), and passes it to the next layer.
+*/
+
+/* LIBRARY HEADERS */
+#include <constants.h>  // Library constants
 #include "level6_presentation.h"
-#include <string.h>
-#include <stdio.h>
 #include "level5_session.h"
 
-char tmpbuf[1024] = {0};
+/* STANDARD HEADERS */
+#include <string.h>
+#include <stdio.h>
+
+char tmpbuf[PDU_SIZE] = {0};
 
 char* rot13(const char* input) {
     char* output = strdup(input);

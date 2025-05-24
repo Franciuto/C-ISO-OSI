@@ -19,7 +19,7 @@
 
 char tmpbuf[PDU_SIZE] = {0};
 
-char* rot13(const char* input) {
+char* rot13_encrypt(const char* input) {
     char* output = strdup(input);
     for (int i = 0; output[i] != '\0'; i++) {
         char c = output[i];
@@ -28,6 +28,19 @@ char* rot13(const char* input) {
             output[i] = ((c - 'A' + 13) % 26) + 'A';
         } else if (c >= 'a' && c <= 'z') {
             output[i] = ((c - 'a' + 13) % 26) + 'a';
+        }
+    }
+    return output;
+}
+char* rot13_decrypt(const char* input){
+    char* output = strdup(input);
+    for (int i = 0; output[i] != '\0'; i++) {
+        char c = output[i];
+
+        if (c >= 'A' && c <= 'Z') {
+            output[i] = ((c - 'A' - 13) % 26) + 'A';
+        } else if (c >= 'a' && c <= 'z') {
+            output[i] = ((c - 'a' - 13) % 26) + 'a';
         }
     }
     return output;

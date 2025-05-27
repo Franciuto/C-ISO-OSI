@@ -10,75 +10,72 @@ int id_session_generator() {
 }
 int current_session_id;
 
-char* livello5_send(const char* dati const char* action) {
+char* livello5_send(const char* dati, const char* action) {
     printf("[Livello 5 - Sessione] SEND: Ricevuto payload: '%s', Azione: '%s'\n", dati, action);
     char header_buffer[128];                // inizialize header with the session level
     size_t header_len;
     int sess_id;  
-    current_session_id = sess_id;           // update current session id
     if (action == "INIT"){
-        sess_id = generate_session_id();    // generate session id
-        snprintf(header_buffer, sizeof(header_buffer), "[SESS][INIT][ID = %d]", &sess_id);}     // print and copy into the header_buffer
+        sess_id = id_session_generator();    // generate session id
+        current_session_id = sess_id;           // update current session id
+        snprintf(header_buffer, sizeof(header_buffer), "[SESS][INIT][ID = %d]", sess_id);}     // print and copy into the header_buffer
     else if(action == "CLOSE"){
-        snprintf(header_buffer, sizeof(header_buffer), "[SESS][CLOSE][ID = %d]", &sess_id);     // print and copy into the header_buffer
-        sess_id = 0;}
-    else
-       snprintf(header_buffer, sizeof(header_buffer), "[SESS][NORMAL][ID= %d]", &sess_id);      // print and copy into the header_buffer
-    char* segment = livello4_send(sess_id);
-    return segment;
+        sess_id = current_session_id;
+        snprintf(header_buffer, sizeof(header_buffer), "[SESS][CLOSE][ID = %d]", sess_id);     // print and copy into the header_buffer
+        current_session_id = 0;}
+    else {
+        sess_id = current_session_id;
+        snprintf(header_buffer, sizeof(header_buffer), "[SESS][NORMAL][ID = %d]", sess_id);
+    }
+    char pdu[PDU_SIZE];
+    snprintf(pdu, sizeof(pdu), "%s%s", header_buffer, dati);
+    return livello4_send(pdu);      
 }
 
 /*
 char* livello5_receive(const char* pdu) {
-    if(pdu == NULL) return NULL;
-    char data[PDU_SIZE];
-    if(strncmp(pdu, "[SESS]", 6) != 0) {                //verify the pdu validity
-        printf("ERRORE! header SESS mancante!");
-        return NULL;}
-    const char* action_start = strchr(pdu + 6, '[');
-    const char* action_end = strchr(action_start, ']');
-    if (!action_end || !action_start){
-        printf("ERRORE! action mancante o malformato!");
-        return NULL;}
-    
-    size_t action_len = action_end - action_start - 1;  //get action len
-    if (action_len >= 15){
-        printf("ERRORE! Action non riconosciuta perche' troppo lunga!");
-        return NULL;}
-    const char* id_start = strstr(action_end, "[ID =");
-    if (!id_start){
-        printf("ERRORE! ID non presente!");         // get ID
-        return NULL;}
-    
-    if (strcmp(action, "INIT") == 0) {
-        current_session_id = id;                                // control which action esecute
-        printf("Sessione inizializzata con ID: %d\n", id);
+    if (pdu == NULL) return NULL;                       // verify pdu is not empty
+
+    if (strncmp(pdu, "[SESS]", 6) != 0) {               //verify the pdu validity
+        printf("ERRORE! header SESS mancante!\n");
+        return NULL;
     }
-    else if (strcmp(action, "CLOSE") == 0) {
-        if (id != current_session_id) {                         // control ID validity
+    char action[16];
+    int id;
+    if (sscanf(pdu, "[SESS][%15[^]]][ID = %d]", action, &id) != 2) {        // get action and id
+        printf("ERRORE! Parsing fallito!\n");
+        return NULL;
+    }
+
+    if (action == "INIT") {                                     // verify which action to execute
+        current_session_id = id;
+        printf("Sessione inizializzata con ID: %d\n", id);
+    } else if (strcmp(action, "CLOSE") == 0) {
+        if (id != current_session_id) {
             printf("ERRORE! ID CLOSE non valido!\n");
             return NULL;
         }
         printf("Sessione chiusa con ID: %d\n", id);
         current_session_id = 0;
-    }
-    else if (strcmp(action, "NORMAL") == 0) {
+    } else if (action == "NORMAL") {
         if (id != current_session_id) {
             printf("ERRORE! ID NORMAL non valido!\n");
             return NULL;
         }
-    }
-    else {
+    } else {
         printf("ERRORE! Action sconosciuta: %s\n", action);
         return NULL;
     }
-    const char* payload_start = strchr(id_start, ']');          //get payload
-    if (!payload_start) {                                       // verify payload validity
+
+    const char* payload_start = strchr(pdu, ']');
+    if (payload_start) payload_start = strchr(payload_start + 1, ']');      // get the payload
+    if (payload_start) payload_start = strchr(payload_start + 1, ']');
+    if (!payload_start || !*(payload_start + 1)) {
         printf("ERRORE! Payload mancante!\n");
         return NULL;
     }
-    return livello6_receive(++payload_start);                   //go to level6_receive
-    return 0;
+
+    return livello6_receive(payload_start + 1);     // go to livello6_receive
 }
 // da fare
 */

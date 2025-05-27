@@ -1,39 +1,38 @@
 /* C-ISO-OSI - Session layer - Functions */
-#include "constants.h"  // Library constants
+#include <constants.h>  // Library constants
 #include "level5_session.h"
 #include "level4_transport.h"
-#include <time.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-char* livello5_send(const char* dati, const char* action) {
+int id_session_generator() {
+    time_t now = time(NULL);
+    int random = rand() % 1000;
+    return ((now % 1000000) * 1000 + random);
+}
+int current_session_id;
+
+char* livello5_send(const char* dati const char* action) {
     printf("[Livello 5 - Sessione] SEND: Ricevuto payload: '%s', Azione: '%s'\n", dati, action);
-    char header_buffer[128];                // inizializza l'header del livello di sessione
-    int sess_id = 0;     
-    if (strcmp(action, "INIT") == 0){
-        sess_id = 4;
-        snprintf(header_buffer, sizeof(header_buffer), "[SESS] [INIT] [ID = %d]", sess_id);     // print and copy into the header_buffer
-    }
-    else if(strcmp(action, "CLOSE") == 0){
-        snprintf(header_buffer, sizeof(header_buffer), "[SESS] [CLOSE] [ID = %d]", sess_id);
-        sess_id = 0;
-    }
-    else {
-        snprintf(header_buffer, sizeof(header_buffer), "[SESS] [NORMAL] [ID= %d]", sess_id);
-    }
-    size_t total_len = strlen(header_buffer) + strlen(dati) + 1;
-    char* pack = malloc(total_len);
-    snprintf(pack, total_len, "%s%s", header_buffer, dati);
-
-    return livello4_send(pack);
+    char header_buffer[128];                // inizialize header with the session level
+    size_t header_len;
+    int sess_id;  
+    current_session_id = sess_id;           // update current session id
+    if (action == "INIT"){
+        sess_id = generate_session_id();    // generate session id
+        snprintf(header_buffer, sizeof(header_buffer), "[SESS][INIT][ID = %d]", &sess_id);}     // print and copy into the header_buffer
+    else if(action == "CLOSE"){
+        snprintf(header_buffer, sizeof(header_buffer), "[SESS][CLOSE][ID = %d]", &sess_id);     // print and copy into the header_buffer
+        sess_id = 0;}
+    else
+       snprintf(header_buffer, sizeof(header_buffer), "[SESS][NORMAL][ID= %d]", &sess_id);      // print and copy into the header_buffer
+    char* segment = livello4_send(sess_id);
+    return segment;
 }
 
 /*
 char* livello5_receive(const char* pdu) {
     if(pdu == NULL) return NULL;
     char data[PDU_SIZE];
-    if(strncmp(pdu, "[SESS]", 6) != 0) {
+    if(strncmp(pdu, "[SESS]", 6) != 0) {                //verify the pdu validity
         printf("ERRORE! header SESS mancante!");
         return NULL;}
     const char* action_start = strchr(pdu + 6, '[');
@@ -42,8 +41,43 @@ char* livello5_receive(const char* pdu) {
         printf("ERRORE! action mancante o malformato!");
         return NULL;}
     
-
-
+    size_t action_len = action_end - action_start - 1;  //get action len
+    if (action_len >= 15){
+        printf("ERRORE! Action non riconosciuta perche' troppo lunga!");
+        return NULL;}
+    const char* id_start = strstr(action_end, "[ID =");
+    if (!id_start){
+        printf("ERRORE! ID non presente!");         // get ID
+        return NULL;}
+    
+    if (strcmp(action, "INIT") == 0) {
+        current_session_id = id;                                // control which action esecute
+        printf("Sessione inizializzata con ID: %d\n", id);
+    }
+    else if (strcmp(action, "CLOSE") == 0) {
+        if (id != current_session_id) {                         // control ID validity
+            printf("ERRORE! ID CLOSE non valido!\n");
+            return NULL;
+        }
+        printf("Sessione chiusa con ID: %d\n", id);
+        current_session_id = 0;
+    }
+    else if (strcmp(action, "NORMAL") == 0) {
+        if (id != current_session_id) {
+            printf("ERRORE! ID NORMAL non valido!\n");
+            return NULL;
+        }
+    }
+    else {
+        printf("ERRORE! Action sconosciuta: %s\n", action);
+        return NULL;
+    }
+    const char* payload_start = strchr(id_start, ']');          //get payload
+    if (!payload_start) {                                       // verify payload validity
+        printf("ERRORE! Payload mancante!\n");
+        return NULL;
+    }
+    return livello6_receive(++payload_start);                   //go to level6_receive
     return 0;
 }
 // da fare

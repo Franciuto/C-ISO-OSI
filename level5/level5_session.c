@@ -1,5 +1,8 @@
 /* C-ISO-OSI - Session layer - Functions */
 #include <constants.h>  // Library constants
+#include <stdio.h>
+#include <time.h>
+#include <string.h>
 #include "level5_session.h"
 #include "level4_transport.h"
 
@@ -75,7 +78,7 @@ char* livello5_receive(const char* pdu) {
         return NULL;
     }
 
-    return livello6_receive(payload_start + 1);     // go to livello6_receive
+    return livello6_receive(++payload_start);     // go to livello6_receive
 }
 // da fare
 */

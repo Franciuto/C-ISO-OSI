@@ -28,8 +28,6 @@ char* livello4_send(const char* sdu_from_l5) {
     int current_id = transport_pdu_id_counter++;
     char* first_pdu_to_return = NULL;
 
-    printf("[4] Trasporto SEND - SDU (len %zu) richiede %d frammento/i con MTU_PAYLOAD %d.\n", sdu_len, num_fragments, MTU_PAYLOAD);
-
     for (int k = 0; k < num_fragments; k++) {
         char pdu_buffer[PDU_SIZE];
         char header_l4[75];
@@ -72,11 +70,6 @@ char* livello4_receive(const char* pdu_from_l3) {
         printf("[4] Trasporto RECV - Header L4 analizzato: K=%d, N=%d, ID=%d. Payload (frammento) inizia da: \"%.20s...\"\n",
                k_frag, n_total_frags, pdu_id_received, payload_start_ptr);
         
-        if (n_total_frags > 1) {
-            printf("[4] Trasporto RECV INFO: Ricevuto frammento %d di %d (ID=%d). Questa versione semplificata non esegue il riassemblaggio completo ma inoltra il payload del frammento corrente.\n",
-                   k_frag, n_total_frags, pdu_id_received);
-        }
-
         char* sdu_chunk_for_l5 = strdup(payload_start_ptr);
         if (!sdu_chunk_for_l5) {
             perror("[4] Trasporto RECV ERRORE: strdup fallito per sdu_chunk_for_l5");

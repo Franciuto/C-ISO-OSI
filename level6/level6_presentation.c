@@ -16,6 +16,7 @@
 /* STANDARD HEADERS */
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 char tmpbuf[PDU_SIZE] = {0};
 
@@ -60,7 +61,7 @@ char* livello6_send(const char* dati) {
     strcpy(pdu_l6, header_l6);
     strcat(pdu_l6, dati_enc);
 
-    printf("[6] Presentation - PDU L6 created: %.30s...\n", pdu_l6);
+    printf("[6] Presentation - PDU L6 created: %s...\n", pdu_l6);
 
     free(dati_enc);
 
@@ -71,26 +72,21 @@ char* livello6_send(const char* dati) {
     return risultato_da_l5;
 }
 
-char* livello6_receive(const char* pdu) {
-    printf("[6] Presentazione - Messaggio da ricevere: %s\n", pdu);
-    return rot13_decrypt(livello5_receive(pdu));
-}
-
 
 char* livello6_receive(const char* pdu_l7) {
     
-    printf("[6] Presentation RECV - Received PDU: %.30s...\n", pdu_l7);
+    printf("[6] Presentation RECV - Received PDU: %s...\n", pdu_l7);
 
     char* pdu_l6 = livello5_receive(pdu_l7);
     
-    printf("[6] Presentation RECV - PDU to process (SDU da L5): %.30s...\n", pdu_l6);
+    printf("[6] Presentation RECV - PDU to process (SDU da L5): %s...\n", pdu_l6);
 
     const char header[] = "[PRES][ENC=ROT13]";
     size_t header_len = strlen(header);
 
     if (strncmp(pdu_l6, header, header_len) == 0) {
         const char* payload_enc = pdu_l6 + header_len;
-        printf("[6] Presentazione RECV - Payload codificato estratto: %.30s...\n", payload_enc);
+        printf("[6] Presentation RECV - Payload decrypted: %s...\n", payload_enc);
 
         char* dati_enc = rot13_decrypt(payload_enc);
         
@@ -98,7 +94,7 @@ char* livello6_receive(const char* pdu_l7) {
 
         return dati_enc; 
     } else {
-        printf("[6] Presentation RECV ERROR: Header L6 '[PRES][ENC=ROT13]' not found. PDU received  from L5: \"%.30s...\"\n", pdu_l6);
+        printf("[6] Presentation RECV ERROR: Header L6 '[PRES][ENC=ROT13]' not found. PDU received  from L5: \"%s...\"\n", pdu_l6);
         free(pdu_l6);
         return NULL;
     }

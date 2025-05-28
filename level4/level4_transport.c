@@ -147,10 +147,10 @@ char* reassemble_message(int msg_index) {
     size_t total_len = 0;
     for (int i = 0; i < msg_total_fragments[msg_index]; i++) {
         if (msg_fragments[msg_index][i] == NULL) {
-            fprintf(stderr, "[4] Trasporto RECV ERRORE: Frammento %d mancante durante il riassemblaggio del messaggio ID=%d\n", 
-                    i+1, msg_ids[msg_index]);
+            fprintf(stderr, "[4] Trasporto RECV ERRORE: Frammento %d mancante durante il riassemblaggio del messaggio ID=%d\n", i + 1, msg_ids[msg_index]);
             return NULL;
         }
+        total_len += strlen(msg_fragments[msg_index][i]);
         total_len += strlen(msg_fragments[msg_index][i]);
     }
     

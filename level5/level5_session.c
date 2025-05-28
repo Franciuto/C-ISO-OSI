@@ -10,13 +10,14 @@
 char* livello5_send(const char* dati, const char* action) {
     printf("[Livello 5 - Sessione] SEND: Ricevuto payload: '%s', Azione: '%s'\n", dati, action);
     char header_buffer[128];                // inizializza l'header del livello di sessione
-    int sess_id = 0;     
+    static int sess_id = -1; // session ID statico per coerenza tra chiamate
     if (strcmp(action, "INIT") == 0){
-        sess_id = 4;
+        sess_id = rand() % 10000 + 1; // genera ID dinamico casuale tra 1 e 10000
         snprintf(header_buffer, sizeof(header_buffer), "[SESS] [INIT] [ID = %d]", sess_id);     // print and copy into the header_buffer
     }
     else if(strcmp(action, "CLOSE") == 0){
         snprintf(header_buffer, sizeof(header_buffer), "[SESS] [CLOSE] [ID = %d]", sess_id);
+        sess_id = -1; // resetta ID dopo CLOSE
         sess_id = 0;
     }
     else {
@@ -99,12 +100,21 @@ char* livello5_receive(const char* pdu) {
     }
     
     // Extract the session ID
-    int sess_id = 0;
+    static int sess_id = -1; // session ID statico per coerenza tra chiamate
     int scanned = sscanf(id_part, "[ID= %d]", &sess_id);
     if (scanned != 1) {
         fprintf(stderr, "[Livello 5 - Sessione] RECV WARNING: Could not parse session ID.\n");
     } else {
         printf("[Livello 5 - Sessione] RECV: Azione '%s', ID sessione %d\n", action, sess_id);
+    static int current_session_id = -1;
+    if (strcmp(action, "INIT") == 0) {
+        current_session_id = sess_id;
+    } else if (current_session_id != sess_id) {
+        fprintf(stderr, "[Livello 5 - Sessione] RECV ERROR: ID sessione incoerente (atteso: %d, ricevuto: %d)\n", current_session_id, sess_id);
+        return NULL;
+    } else if (strcmp(action, "CLOSE") == 0) {
+        current_session_id = -1;
+    }
     }
     
     // Find the end of the session header (closing bracket of ID section)

@@ -21,7 +21,7 @@
 char* livello7_send(const char* dati) {
     printf("\n\t--------- ISO/OSI Send stack -------\n\n[7] Application - Message to send: %s\n", dati);
 
-    return livello6_send(dati);
+    return livello6_send(dati, "ROT13");
 }
 
 // Check if the PDU contains a transport header

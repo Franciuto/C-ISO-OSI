@@ -14,6 +14,14 @@
 #include "level2_datalink.h"
 
 /* STANDARD HEADERS */
+unsigned char calculate_checksum(const char* data) {
+    unsigned int sum = 0;
+    for (int i = 0; data[i]; ++i) {
+        sum += (unsigned char)data[i];
+    }
+    return sum % 256;
+}
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -42,9 +50,18 @@ char* livello2_receive(const char* pdu) {
     }
     
     // Validate the frame
-    if (!validate_frame(frame)) {
-        printf("[L2] Datalink ERROR - Received invalid frame, discarding\n");
-        free(frame); // Free the invalid frame
+    char received_checksum[3];
+    char received_data[PDU_SIZE];
+    unsigned char calc_checksum;
+    sscanf(frame, "%[^[][CHK=%2s]", received_data, received_checksum);
+    calc_checksum = calculate_checksum(received_data);
+    
+    char hex_checksum[3];
+    snprintf(hex_checksum, 3, "%02X", calc_checksum);
+
+    if (strcmp(hex_checksum, received_checksum) != 0) {
+        printf("[L2] Datalink ERROR - Checksum error! Frame discarded. Received checksum: %s, Calculated checksum: %s\n", received_checksum, hex_checksum);
+        free(frame);
         return NULL;
     }
     
@@ -66,7 +83,10 @@ char* livello2_send(const char* dati) {
     
     // In a real implementation, we would add a checksum here
     // For this simulation, we'll just pass the data to Layer 1
-    livello1_send(dati);
+    unsigned char checksum = calculate_checksum(dati);
+    char frame_with_checksum[PDU_SIZE];
+    snprintf(frame_with_checksum, sizeof(frame_with_checksum), "%s[CHK=%02X]", dati, checksum);
+    livello1_send(frame_with_checksum);
     
     return strdup(dati); // Return a copy of the sent data
 }

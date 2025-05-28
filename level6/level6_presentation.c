@@ -20,6 +20,9 @@
 #include <stdlib.h>
 
 char tmpbuf[PDU_SIZE] = {0};
+const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+char* base64_encode(const char* input);
+char* base64_decode(const char* input);
 
 char* rot13_encrypt(const char* input) {
     char* output = strdup(input);
@@ -48,16 +51,98 @@ char* rot13_decrypt(const char* input){
     return output;
 }
 
-char* livello6_send(const char* dati) {
+char* base64_encode(const char* input) {
+    int len = strlen(input), i = 0, j = 0;
+    unsigned char buf3[3], buf4[4];
+    char* output = malloc((4 * ((len + 2) / 3) + 1));
+    int idx = 0;
+
+    while(len--) {
+        buf3[i++] = *(input++);
+        if(i == 3) {
+            buf4[0] = (buf3[0] & 0xfc) >> 2;
+            buf4[1] = ((buf3[0] & 0x03) << 4) + ((buf3[1] & 0xf0) >> 4);
+            buf4[2] = ((buf3[1] & 0x0f) << 2) + ((buf3[2] & 0xc0) >> 6);
+            buf4[3] = buf3[2] & 0x3f;
+
+            for(i = 0; i < 4; i++) output[idx++] = base64_chars[buf4[i]];
+            i = 0;
+        }
+    }
+
+    if(i) {
+        for(j = i; j < 3; j++) buf3[j] = '\0';
+
+        buf4[0] = (buf3[0] & 0xfc) >> 2;
+        buf4[1] = ((buf3[0] & 0x03) << 4) + ((buf3[1] & 0xf0) >> 4);
+        buf4[2] = ((buf3[1] & 0x0f) << 2) + ((buf3[2] & 0xc0) >> 6);
+        buf4[3] = buf3[2] & 0x3f;
+
+        for(j = 0; j < i + 1; j++) output[idx++] = base64_chars[buf4[j]];
+        while(i++ < 3) output[idx++] = '=';
+    }
+    output[idx] = '\0';
+    return output;
+}
+
+char* base64_decode(const char* input) {
+    int len = strlen(input), i = 0, j, in = 0;
+    unsigned char buf4[4], buf3[3];
+    char* output = malloc(len * 3 / 4 + 1);
+    int idx = 0;
+
+    while(len-- && ( input[in] != '=')) {
+        buf4[i++] = input[in++];
+        if(i ==4) {
+            for(i = 0; i <4; i++) buf4[i] = strchr(base64_chars, buf4[i]) - base64_chars;
+
+            buf3[0] = ( buf4[0] << 2 ) + ((buf4[1] & 0x30) >> 4);
+            buf3[1] = ((buf4[1] & 0xf) << 4) + ((buf4[2] & 0x3c) >> 2);
+            buf3[2] = ((buf4[2] & 0x3) << 6) + buf4[3];
+
+            for(i = 0; i < 3; i++) output[idx++] = buf3[i];
+            i = 0;
+        }
+    }
+    if(i) {
+        for(j = i; j <4; j++) buf4[j] = 0;
+        for(j = 0; j <4; j++) buf4[j] = strchr(base64_chars, buf4[j]) - base64_chars;
+        buf3[0] = ( buf4[0] << 2 ) + ((buf4[1] & 0x30) >> 4);
+        buf3[1] = ((buf4[1] & 0xf) << 4) + ((buf4[2] & 0x3c) >> 2);
+        for(j = 0; j < i - 1; j++) output[idx++] = buf3[j];
+    }
+    output[idx] = '\0';
+    return output;
+}
+
+char* livello6_send(const char* dati, const char* enc_type) {
     printf("[6] Presentation - Datas from L7: %s\n", dati);
 
-    char* dati_enc = rot13_encrypt(dati);
+    char* dati_enc = NULL;
+    const char* header_l6 = NULL;
 
-    const char header_l6[] = "[PRES][ENC=ROT13]";
+    if (strcmp(enc_type, "BASE64") == 0) {
+        dati_enc = base64_encode(dati);
+        header_l6 = "[PRES][ENC=BASE64]";
+    } else {
+        dati_enc = rot13_encrypt(dati);
+        header_l6 = "[PRES][ENC=ROT13]";
+    }
+
+    if (!dati_enc || !header_l6) {
+        fprintf(stderr, "[6] Presentation ERROR: Encoding failed\n");
+        return NULL;
+    }
+
     size_t header_len = strlen(header_l6);
     size_t enc_len = strlen(dati_enc);
-    
     char* pdu_l6 = (char*)malloc(header_len + enc_len + 1);
+
+    if (!pdu_l6) {
+        fprintf(stderr, "[6] Presentation ERROR: Memory allocation failed\n");
+        free(dati_enc);
+        return NULL;
+    }
 
     strcpy(pdu_l6, header_l6);
     strcat(pdu_l6, dati_enc);
@@ -67,9 +152,9 @@ char* livello6_send(const char* dati) {
     free(dati_enc);
 
     char* risultato_da_l5 = livello5_send(pdu_l6, "NORMAL");
-    
+
     free(pdu_l6);
-    
+
     return risultato_da_l5;
 }
 
@@ -155,7 +240,22 @@ char* livello6_receive(const char* pdu_l7) {
     printf("[6] Presentation RECV - Found encoded payload: %s\n", payload);
     
     // ROT13 decode
-    char* decoded = rot13_decrypt(payload);
+    char* decoded = NULL;
+    if (strstr(session_pdu, "[ENC=BASE64]")) {
+        decoded = base64_decode(payload);
+        if (!decoded) {
+            printf("[6] Presentation RECV ERROR: Failed to decode BASE64\n");
+            free(session_pdu);
+            return NULL;
+        }
+    } else {
+        decoded = rot13_decrypt(payload);
+        if (!decoded) {
+            printf("[6] Presentation RECV ERROR: Failed to decode ROT13\n");
+            free(session_pdu);
+            return NULL;
+        }
+    }
     if (!decoded) {
         printf("[6] Presentation RECV ERROR: Failed to decode ROT13\n");
         free(session_pdu);

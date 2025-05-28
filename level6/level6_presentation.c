@@ -79,6 +79,13 @@ char* livello6_receive(const char* pdu_l7) {
 
     char* pdu_l6 = livello5_receive(pdu_l7);
     
+    // Check if pdu_l6 is NULL before proceeding
+    if (pdu_l6 == NULL) {
+        printf("[6] Presentation RECV ERROR: Received NULL from Session Layer\n");
+        return NULL;
+    }
+    
+    // Now it's safe to use pdu_l6 after NULL check
     printf("[6] Presentation RECV - PDU to process (SDU da L5): %s...\n", pdu_l6);
 
     const char header[] = "[PRES][ENC=ROT13]";
@@ -94,7 +101,7 @@ char* livello6_receive(const char* pdu_l7) {
 
         return dati_enc; 
     } else {
-        printf("[6] Presentation RECV ERROR: Header L6 '[PRES][ENC=ROT13]' not found. PDU received  from L5: \"%s...\"\n", pdu_l6);
+        printf("[6] Presentation RECV ERROR: Header L6 '[PRES][ENC=ROT13]' not found. PDU received from L5: \"%s...\"\n", pdu_l6);
         free(pdu_l6);
         return NULL;
     }

@@ -16,7 +16,7 @@ char* livello4_send(const char* sdu_from_l5) {
         fprintf(stderr, "[4] Trasporto SEND ERRORE: SDU da L5 è NULL. Invio PDU vuota a L3.\n");
         char pdu_buffer[100];
         int temp_id = transport_pdu_id_counter++;
-        snprintf(pdu_buffer, sizeof(pdu_buffer), "[TRANS][FRAG=1/1][ID=%02d]", temp_id);
+        snprintf(pdu_buffer, sizeof(pdu_buffer), "[TRANS] [FRAG=1/1] [ID=%02d] ", temp_id);
         livello3_send(pdu_buffer);
         return strdup(pdu_buffer);
     }
@@ -32,7 +32,7 @@ char* livello4_send(const char* sdu_from_l5) {
         char pdu_buffer[PDU_SIZE];
         char header_l4[75];
         
-        snprintf(header_l4, sizeof(header_l4), "[TRANS][FRAG=%d/%d][ID=%02d]", k + 1, num_fragments, current_id);
+        snprintf(header_l4, sizeof(header_l4), "[TRANS] [FRAG=%d/%d] [ID=%02d] ", k + 1, num_fragments, current_id);
 
         size_t current_payload_offset = k * MTU_PAYLOAD;
         size_t current_payload_len;
@@ -61,10 +61,7 @@ char* livello4_receive(const char* pdu_from_l3) {
     int k_frag, n_total_frags, pdu_id_received;
     int header_actual_len = 0;
     
-    if (sscanf(pdu_from_l3, "[TRANS][FRAG=%d/%d][ID=%d]%n",
-               &k_frag, &n_total_frags, &pdu_id_received, &header_actual_len) == 3 &&
-        header_actual_len > 0 && pdu_from_l3[header_actual_len - 1] == ']') {
-
+    if (sscanf(pdu_from_l3, "[TRANS] [FRAG=%d/%d] [ID=%d]%n", &k_frag, &n_total_frags, &pdu_id_received, &header_actual_len) == 3 && header_actual_len > 0 && pdu_from_l3[header_actual_len - 1] == ']') {
         const char* payload_start_ptr = pdu_from_l3 + header_actual_len;
         
         printf("[4] Trasporto RECV - Header L4 analizzato: K=%d, N=%d, ID=%d. Payload (frammento) inizia da: \"%.20s...\"\n",

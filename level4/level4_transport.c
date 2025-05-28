@@ -23,6 +23,27 @@ static char* msg_fragments[MAX_MESSAGES][MAX_FRAGMENTS] = {{NULL}};  // Fragment
 // Flag to track if arrays are initialized
 static int reassembly_initialized = 0;
 
+// Function prototypes for internal functions
+void init_reassembly_arrays(void);
+void free_message(int index);
+int find_message_by_id(int id);
+int find_empty_slot(void);
+char* reassemble_message(int msg_index);
+const char* find_transport_header(const char* pdu);
+
+// Initialize the transport layer
+void livello4_init() {
+    printf("[4] Trasporto - Initializing transport layer...\n");
+    
+    // Reset PDU ID counter
+    transport_pdu_id_counter = 1;
+    
+    // Initialize the reassembly arrays
+    init_reassembly_arrays();
+    
+    printf("[4] Trasporto - Transport layer initialized successfully\n");
+}
+
 char* livello4_send(const char* sdu_from_l5) {
     if (sdu_from_l5 == NULL) {
         fprintf(stderr, "[4] Trasporto SEND ERRORE: SDU da L5 è NULL. Invio PDU vuota a L3.\n");
@@ -140,7 +161,7 @@ char* reassemble_message(int msg_index) {
         return NULL;
     }
     
-    // Reassemble fragments
+    // Reassemble fragments - they already have transport headers removed
     complete_message[0] = '\0';
     for (int i = 0; i < msg_total_fragments[msg_index]; i++) {
         strcat(complete_message, msg_fragments[msg_index][i]);
@@ -152,27 +173,64 @@ char* reassemble_message(int msg_index) {
     return complete_message;
 }
 
+// Find the transport header in a PDU that may contain network headers
+const char* find_transport_header(const char* pdu) {
+    if (pdu == NULL) return NULL;
+    
+    // Look for the transport header
+    const char* trans_header = strstr(pdu, "[TRANS]");
+    if (trans_header == NULL) {
+        fprintf(stderr, "[4] Trasporto RECV ERRORE: Transport header non trovato nel PDU\n");
+        return NULL;
+    }
+    
+    return trans_header;
+}
+
 char* livello4_receive(const char* pdu_from_l3) {
     // Initialize reassembly arrays if not already done
     if (!reassembly_initialized) {
         init_reassembly_arrays();
     }
     
+    // If this is a direct call from Application/Presentation layer with a fragment
+    // that shouldn't happen, but we need to handle it gracefully
+    if (pdu_from_l3 == NULL) {
+        fprintf(stderr, "[4] Trasporto RECV ERRORE: PDU ricevuto è NULL\n");
+        return NULL;
+    }
+    
+    // Find the transport header in the PDU (after network headers)
+    const char* trans_header = find_transport_header(pdu_from_l3);
+    if (trans_header == NULL) {
+        // If no transport header is found, pass the PDU directly to the session layer
+        return livello5_receive(pdu_from_l3);
+    }
+    
     int k_frag, n_total_frags, pdu_id_received;
     int header_actual_len = 0;
     
-    if (sscanf(pdu_from_l3, "[TRANS] [FRAG=%d/%d] [ID=%d]%n", &k_frag, &n_total_frags, &pdu_id_received, &header_actual_len) == 3 && 
-       header_actual_len > 0 && pdu_from_l3[header_actual_len - 1] == ']') {
-        const char* payload_start_ptr = pdu_from_l3 + header_actual_len;
+    if (sscanf(trans_header, "[TRANS] [FRAG=%d/%d] [ID=%d]%n", &k_frag, &n_total_frags, &pdu_id_received, &header_actual_len) == 3 && 
+       header_actual_len > 0 && trans_header[header_actual_len - 1] == ']') {
+        const char* payload_start_ptr = trans_header + header_actual_len + 1; // +1 to skip the space after header
         
         printf("[4] Trasporto RECV - Header L4 analizzato: K=%d, N=%d, ID=%d. Payload (frammento) inizia da: \"%.20s...\"\n",
                k_frag, n_total_frags, pdu_id_received, payload_start_ptr);
+        
+        // Log the network headers that were found
+        if (trans_header != pdu_from_l3) {
+            int network_header_len = trans_header - pdu_from_l3;
+            char network_headers[128];
+            strncpy(network_headers, pdu_from_l3, (network_header_len > 127) ? 127 : network_header_len);
+            network_headers[(network_header_len > 127) ? 127 : network_header_len] = '\0';
+            printf("[4] Trasporto RECV - Trovati network headers: \"%s\"\n", network_headers);
+        }
         
         // Validate fragment index
         if (k_frag < 1 || k_frag > n_total_frags || n_total_frags > MAX_FRAGMENTS) {
             fprintf(stderr, "[4] Trasporto RECV ERRORE: Indice frammento non valido (K=%d, N=%d)\n", 
                     k_frag, n_total_frags);
-            return livello5_receive(NULL);
+            return NULL;
         }
         
         // Find or create message entry
@@ -182,7 +240,7 @@ char* livello4_receive(const char* pdu_from_l3) {
             msg_index = find_empty_slot();
             if (msg_index < 0) {
                 fprintf(stderr, "[4] Trasporto RECV ERRORE: Buffer di riassemblaggio pieno\n");
-                return livello5_receive(NULL);
+                return NULL;
             }
             
             // Initialize new message entry
@@ -195,7 +253,7 @@ char* livello4_receive(const char* pdu_from_l3) {
             if (msg_total_fragments[msg_index] != n_total_frags) {
                 fprintf(stderr, "[4] Trasporto RECV ERRORE: Incoerenza nel numero totale di frammenti per ID=%d (%d vs %d)\n", 
                         pdu_id_received, msg_total_fragments[msg_index], n_total_frags);
-                return livello5_receive(NULL);
+                return NULL;
             }
         }
         
@@ -211,12 +269,15 @@ char* livello4_receive(const char* pdu_from_l3) {
             msg_fragments_received[msg_index]++;
         }
         
-        // Store fragment payload
+        // Store only the fragment payload (without any headers)
         msg_fragments[msg_index][frag_index] = strdup(payload_start_ptr);
         if (!msg_fragments[msg_index][frag_index]) {
             perror("[4] Trasporto RECV ERRORE: strdup fallito per il frammento");
-            return livello5_receive(NULL);
+            return NULL;
         }
+        
+        printf("[4] Trasporto RECV - Stored fragment %d/%d: \"%s\"\n", 
+               k_frag, n_total_frags, msg_fragments[msg_index][frag_index]);
         
         // Check if all fragments received
         if (msg_fragments_received[msg_index] == msg_total_fragments[msg_index]) {
@@ -227,8 +288,13 @@ char* livello4_receive(const char* pdu_from_l3) {
             if (!complete_message) {
                 fprintf(stderr, "[4] Trasporto RECV ERRORE: Riassemblaggio fallito per ID=%d\n", pdu_id_received);
                 free_message(msg_index);
-                return livello5_receive(NULL);
+                return NULL;
             }
+            
+            printf("[4] Trasporto RECV - Messaggio riassemblato completo: \"%s\"\n", complete_message);
+            
+            // Now the message should be the complete session layer PDU
+            printf("[4] Trasporto RECV - Forwarding complete reassembled message to Session layer\n");
             
             // Forward reassembled message to upper layer
             char* result_from_l5 = livello5_receive(complete_message);
@@ -248,7 +314,7 @@ char* livello4_receive(const char* pdu_from_l3) {
             return NULL;
         }
     } else {
-        fprintf(stderr, "[4] Trasporto RECV ERRORE: Header L4 non analizzabile o formato PDU non riconosciuto: \"%.30s...\"\n", pdu_from_l3);
-        return livello5_receive(NULL);
+        fprintf(stderr, "[4] Trasporto RECV ERRORE: Formato transport header non valido: \"%.30s...\"\n", trans_header);
+        return NULL;
     }
 }

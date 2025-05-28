@@ -12,6 +12,7 @@
 #include <constants.h>  // Library constants
 #include "level6_presentation.h"
 #include "level5_session.h"
+#include "level4_transport.h"
 
 /* STANDARD HEADERS */
 #include <string.h>
@@ -73,36 +74,99 @@ char* livello6_send(const char* dati) {
 }
 
 
-char* livello6_receive(const char* pdu_l7) {
+// Check if the PDU contains a transport header
+static int is_transport_fragment(const char* pdu) {
+    if (pdu == NULL) return 0;
     
-    printf("[6] Presentation RECV - Received PDU: %s...\n", pdu_l7);
-
-    char* pdu_l6 = livello5_receive(pdu_l7);
-    
-    // Check if pdu_l6 is NULL before proceeding
-    if (pdu_l6 == NULL) {
-        printf("[6] Presentation RECV ERROR: Received NULL from Session Layer\n");
-        return NULL;
+    // Check for direct transport header at start
+    if (strncmp(pdu, "[TRANS]", 7) == 0) {
+        return 1;
     }
     
-    // Now it's safe to use pdu_l6 after NULL check
-    printf("[6] Presentation RECV - PDU to process (SDU da L5): %s...\n", pdu_l6);
+    // Check for transport header after network headers
+    if (strstr(pdu, "[TRANS]") != NULL) {
+        return 1;
+    }
+    
+    return 0;
+}
 
-    const char header[] = "[PRES][ENC=ROT13]";
-    size_t header_len = strlen(header);
-
-    if (strncmp(pdu_l6, header, header_len) == 0) {
-        const char* payload_enc = pdu_l6 + header_len;
-        printf("[6] Presentation RECV - Payload decrypted: %s...\n", payload_enc);
-
-        char* dati_enc = rot13_decrypt(payload_enc);
-        
-        free(pdu_l6);
-
-        return dati_enc; 
+// Print the PDU content for debugging, limited to a reasonable length
+static void debug_print_pdu(const char* prefix, const char* pdu) {
+    if (pdu == NULL) {
+        printf("%s: (null)\n", prefix);
+        return;
+    }
+    
+    size_t len = strlen(pdu);
+    if (len > 40) {
+        char buf[44];
+        strncpy(buf, pdu, 40);
+        buf[40] = '.';
+        buf[41] = '.';
+        buf[42] = '.';
+        buf[43] = '\0';
+        printf("%s: \"%s\"\n", prefix, buf);
     } else {
-        printf("[6] Presentation RECV ERROR: Header L6 '[PRES][ENC=ROT13]' not found. PDU received from L5: \"%s...\"\n", pdu_l6);
-        free(pdu_l6);
+        printf("%s: \"%s\"\n", prefix, pdu);
+    }
+}
+
+char* livello6_receive(const char* pdu_l7) {
+    printf("[6] Presentation RECV - Starting processing of PDU\n");
+    debug_print_pdu("[6] Presentation RECV - Input PDU", pdu_l7);
+    
+    // Check for NULL input
+    if (pdu_l7 == NULL) {
+        printf("[6] Presentation RECV ERROR: Received NULL PDU\n");
         return NULL;
     }
+    
+    // Handle transport fragments first
+    if (is_transport_fragment(pdu_l7)) {
+        printf("[6] Presentation RECV - Detected transport fragment, forwarding to transport layer\n");
+        return livello4_receive(pdu_l7);
+    }
+    
+    // Process PDU from session layer
+    printf("[6] Presentation RECV - Processing session layer PDU\n");
+    char* session_pdu = livello5_receive(pdu_l7);
+    if (!session_pdu) {
+        printf("[6] Presentation RECV ERROR: NULL from Session layer\n");
+        return NULL;
+    }
+    
+    printf("[6] Presentation RECV - Got PDU from Session: %s\n", session_pdu);
+    
+    // Find presentation header
+    const char* header = "[PRES][ENC=ROT13]";
+    const char* payload = strstr(session_pdu, header);
+    if (!payload) {
+        printf("[6] Presentation RECV ERROR: Missing [PRES] header\n");
+        free(session_pdu);
+        return NULL;
+    }
+    
+    // Skip header and whitespace
+    payload += strlen(header);
+    while (*payload && (*payload == ' ' || *payload == '\n' || *payload == '\t')) 
+        payload++;
+    
+    printf("[6] Presentation RECV - Found encoded payload: %s\n", payload);
+    
+    // ROT13 decode
+    char* decoded = rot13_decrypt(payload);
+    if (!decoded) {
+        printf("[6] Presentation RECV ERROR: Failed to decode ROT13\n");
+        free(session_pdu);
+        return NULL;
+    }
+    
+    printf("[6] Presentation RECV - ROT13 decoded '%s' back to '%s'\n", 
+           payload, decoded);
+    
+    // Clean up
+    free(session_pdu);
+    
+    return decoded;
 }

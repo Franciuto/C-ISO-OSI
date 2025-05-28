@@ -2,6 +2,7 @@
 #include "constants.h"  // Library constants
 #include "level5_session.h"
 #include "level4_transport.h"
+#include "level6_presentation.h" // For livello6_receive
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -131,12 +132,14 @@ char* livello5_receive(const char* pdu) {
     while (*payload_start == ' ') payload_start++;
     
     // Find presentation layer header in the payload
+    // Find presentation layer header in the payload
     const char* pres_header = strstr(payload_start, "[PRES]");
     if (pres_header) {
-        // If found, return just the presentation PDU
-        printf("[Livello 5 - Sessione] RECV: Found presentation header in payload\n");
-        printf("[Livello 5 - Sessione] RECV: Extracted clean payload: '%s'\n", pres_header);
-        return strdup(pres_header);
+        // If found, pass the presentation PDU to Layer 6 for processing
+        printf("[Livello 5 - Sessione] RECV: Found presentation header in payload, passing to L6: '%s'\n", pres_header);
+        char* sdu_from_l6 = livello6_receive(pres_header); // Call L6 to decode
+        printf("[Livello 5 - Sessione] RECV: Received decoded SDU from L6: '%s'\n", sdu_from_l6);
+        return sdu_from_l6; // Return the decoded data from L6
     } else {
         // Otherwise return the whole payload (might contain other headers)
         printf("[Livello 5 - Sessione] RECV: No presentation header found, returning full payload\n");

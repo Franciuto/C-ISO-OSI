@@ -61,13 +61,13 @@ int main(void) { // void perchè cosi la firma nello stack sarà più leggera
     if (final_result != NULL) {
         printf("\n");
         printf("╔════════════════════════════════════════════════════════╗\n");
-        printf("║                 ISO/OSI SIMULATION RESULT               ║\n");
+        printf("║                 ISO/OSI SIMULATION RESULT              ║\n");
         printf("╠════════════════════════════════════════════════════════╣\n");
-        printf("║ Original message: \"Ciao!\"                               ║\n");
+        printf("║ Original message: \"Ciao!\"                            ║\n");
         printf("║                                                        ║\n");
         printf("║ Message sent through ISO/OSI stack:                    ║\n");
         printf("║   → Passed down through Application layer              ║\n");
-        printf("║   → ROT13 encoded in Presentation layer: \"Pvnb!\"        ║\n");
+        printf("║   → ROT13 encoded in Presentation layer: \"Pvnb!\"     ║\n");
         printf("║   → Session headers added                              ║\n");
         printf("║   → Split into 3 fragments by Transport layer          ║\n");
         printf("║   → Transmitted through Network, Datalink, Physical    ║\n");
@@ -77,16 +77,16 @@ int main(void) { // void perchè cosi la firma nello stack sarà più leggera
         printf("║   → Reassembled in Transport layer                     ║\n");
         printf("║   → Session headers removed                            ║\n");
         printf("║   → ROT13 decoded in Presentation layer                ║\n");
-        printf("║   → Final decoded message: \"%s\"                        ║\n", final_result);
+        printf("║   → Final decoded message: \"%s\"                      ║\n", final_result);
         printf("║                                                        ║\n");
         
         // Check if we got back the expected decoded message
         if (strcmp(final_result, "Ciao!") == 0) {
-            printf("║ ✅ Message successfully transmitted through all layers! ║\n");
+            printf("║ ✅ Message successfully transmitted through all layers!║\n");
             printf("║ ✅ ISO/OSI stack simulation completed successfully!    ║\n");
         } else {
             printf("║ ⚠️ Message transmission issue detected!                ║\n");
-            printf("║ ⚠️ Expected: \"Ciao!\" - Received: \"%s\"                 ║\n", final_result);
+            printf("║ ⚠️ Expected: \"Ciao!\" - Received: \"%s\"              ║\n", final_result);
         }
         
         printf("╚════════════════════════════════════════════════════════╝\n");

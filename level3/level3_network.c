@@ -8,12 +8,12 @@
  * adds network headers, and passes it down
  */
 
-// Library libraries
+// LIBRARY HEADERS
 #include "constants.h" // Library constants
 #include "level3_network.h"
 #include "level2_datalink.h"
 
-// Standard libraries
+// STANDARD HEADERS
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

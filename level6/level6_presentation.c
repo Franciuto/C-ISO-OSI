@@ -5,28 +5,24 @@
     - Implements encoding/decoding schemes (e.g., ASCII, EBCDIC, encryption, compression).
     - Ensures that data sent from the application layer of one system can be read by the application layer of another.
 
-    Takes data from the session layer, applies the selected encoding/decoding (e.g., ROT13), and passes it to the next layer.
+    Takes data from the session layer, applies the selected cryptography (ROT13 in this case), and passes it to the next layer.
 */
 
 /* LIBRARY HEADERS */
 #include "constants.h"  // Library constants
 #include "level6_presentation.h"
-#include "level5_session.h" // Needed for livello5_send in livello6_send
-// #include "level4_transport.h" // Generally not needed for L6 receive from L5
+#include "level5_session.h"
 
 /* STANDARD HEADERS */
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-// char tmpbuf[PDU_SIZE] = {0}; // This was in the original, might not be used.
+// Arry to contain all the function used during base64 encode/decode process
 const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-// Forward declaration for base64 functions if not in a header included by level6_presentation.h
-char* base64_encode(const char* input);
-char* base64_decode(const char* input);
-
 // Debug print function (can be shared or defined per layer)
+
 static void debug_print_pdu(const char* prefix, const char* pdu) {
     if (pdu == NULL) {
         printf("%s: (null)\n", prefix);
@@ -44,6 +40,7 @@ static void debug_print_pdu(const char* prefix, const char* pdu) {
         printf("%s: \"%s\"\n", prefix, pdu);
     }
 }
+
 
 char* rot13_encrypt(const char* input) {
     if (input == NULL) return NULL;
@@ -185,11 +182,6 @@ char* livello6_send(const char* dati, const char* enc_type) {
     } else { // Default to ROT13
         dati_enc = rot13_encrypt(dati);
         header_l6_str = "[PRES][ENC=ROT13]";
-    }
-
-    if (!dati_enc) { 
-        fprintf(stderr, "[6] Presentation ERROR: Encoding failed or unsupported encoding type\n");
-        return NULL;
     }
 
     size_t header_len = strlen(header_l6_str);

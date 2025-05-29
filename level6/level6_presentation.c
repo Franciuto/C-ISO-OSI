@@ -1,15 +1,15 @@
-/* C-ISO-OSI - Presentation layer - Functions
+/* C-ISO-OSI - Presentation layer - Fontanesi
 
-    - Responsible for data translation, encryption, and compression.
+    - Responsible for data translation and encryption (ROT13 only).
     - Converts data from the application layer into a common format for transmission.
-    - Implements encoding/decoding schemes (e.g., ASCII, EBCDIC, encryption, compression).
+    - Implements ROT13 encoding/decoding scheme.
     - Ensures that data sent from the application layer of one system can be read by the application layer of another.
 
-    Takes data from the session layer, applies the selected encoding/decoding (e.g., ROT13), and passes it to the next layer.
+    Takes data from the session layer, applies ROT13 cryptography, and passes it to the next layer.
 */
 
 /* LIBRARY HEADERS */
-#include <constants.h>  // Library constants
+#include "constants.h"  // Library constants
 #include "level6_presentation.h"
 #include "level5_session.h"
 
@@ -18,26 +18,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-char tmpbuf[PDU_SIZE] = {0};
+/* Function - rot13_encypt()
+    Produces a copy of the passed string rotated by 13 positions in the alphabeth
+    -- INPUT --
+       -> String to be rotated
 
+    -- OUTPUT --
+       -> String rotated
+*/
 char* rot13_encrypt(const char* input) {
+    if (input == NULL) return NULL;
     char* output = strdup(input);
     for (int i = 0; output[i] != '\0'; i++) {
         char c = output[i];
-
-        if (c >= 'A' && c <= 'Z') {
-            output[i] = ((c - 'A' + 13) % 26) + 'A';
-        } else if (c >= 'a' && c <= 'z') {
-            output[i] = ((c - 'a' + 13) % 26) + 'a';
-        }
-    }
-    return output;
-}
-char* rot13_decrypt(const char* input){
-    char* output = strdup(input);
-    for (int i = 0; output[i] != '\0'; i++) {
-        char c = output[i];
-
         if (c >= 'A' && c <= 'Z') {
             output[i] = ((c - 'A' + 13) % 26) + 'A';
         } else if (c >= 'a' && c <= 'z') {
@@ -47,55 +40,77 @@ char* rot13_decrypt(const char* input){
     return output;
 }
 
-char* livello6_send(const char* dati) {
-    printf("[6] Presentation - Datas from L7: %s\n", dati);
+/* (dumb)Function - rot13_decrypt()
+    Decrypt rot13 string
+    -- INPUT --
+       -> String to be decrypted
 
+    -- OUTPUT --
+       -> String decrypted
+*/
+char* rot13_decrypt(const char* input){    
+    // Call rot 13 encrypt because rotating a string again by 13 we obtain the original message
+    return rot13_encrypt(input);
+}
+
+/* Function - livello6_send()
+    Handle send request for level 6
+    -- INPUT --
+       -> dati: PDU from the caller (level7)
+       -> enc_type: Type of encryption to be performed {"active" : "ROT13", "To develop" : "Base64, Hash"}
+
+    -- OUTPUT --
+       -> String decrypted
+*/
+char* livello6_send(const char* dati, const char* enc_type) {
+    // Check for enc_type
+    if (strcmp(enc_type, "ROT13") != 0) {
+        printf("Invalid encoding: %s Only ROT13 supprted at the moment", enc_type);
+        return NULL;
+    }
+
+    // Data encryption
     char* dati_enc = rot13_encrypt(dati);
+    // Header definition (Rot13 hard coded for now)
+    const char* header_l6_str = "[PRES][ENC=ROT13]";
 
-    const char header_l6[] = "[PRES][ENC=ROT13]";
-    size_t header_len = strlen(header_l6);
-    size_t enc_len = strlen(dati_enc);
+    // Calculate sizes
+    int header_len = strlen(header_l6_str);
+    int enc_len = dati_enc ? strlen(dati_enc) : 0; // If dati_enc != NULL => enc_len = strlen(dati_enc) else enc_len = 0
     
+    // Declare some space to store the final PDU
     char* pdu_l6 = (char*)malloc(header_len + enc_len + 1);
 
-    strcpy(pdu_l6, header_l6);
+    // Compose the final PDU
+    strcpy(pdu_l6, header_l6_str);
     strcat(pdu_l6, dati_enc);
+    free(dati_enc); 
 
-    printf("[6] Presentation - PDU L6 created: %s...\n", pdu_l6);
-
-    free(dati_enc);
-
-    char* risultato_da_l5 = livello5_send(pdu_l6, "NORMAL");
-    
+    // Call level5 using normal
+    char* risultato_da_l5 = livello5_send(pdu_l6, "NORMAL"); 
     free(pdu_l6);
-    
     return risultato_da_l5;
 }
 
+/* Function - livello6_receive()
+    Handle receive request for level 6
+    -- INPUT --
+       -> dati: PDU from the caller (level5)
+    -- OUTPUT --
+       -> Decoded content for perfect usage by level 7
+*/
+char* livello6_receive(const char* sdu_from_l5) {
+    // Header to append definition
+    const char* pres_header_tag = "[PRES][ENC=ROT13]";
+    const char* payload_ptr;
+    char* decoded_sdu;
 
-char* livello6_receive(const char* pdu_l7) {
+    // store the entire message
+    payload_ptr = sdu_from_l5 + strlen(pres_header_tag);
     
-    printf("[6] Presentation RECV - Received PDU: %s...\n", pdu_l7);
-
-    char* pdu_l6 = livello5_receive(pdu_l7);
+    // Decode message and print result
+    decoded_sdu = rot13_decrypt(payload_ptr); 
+    printf("[6] Presentation ROT13 PDU decoded to: \"%s\"\n", decoded_sdu);
     
-    printf("[6] Presentation RECV - PDU to process (SDU da L5): %s...\n", pdu_l6);
-
-    const char header[] = "[PRES][ENC=ROT13]";
-    size_t header_len = strlen(header);
-
-    if (strncmp(pdu_l6, header, header_len) == 0) {
-        const char* payload_enc = pdu_l6 + header_len;
-        printf("[6] Presentation RECV - Payload decrypted: %s...\n", payload_enc);
-
-        char* dati_enc = rot13_decrypt(payload_enc);
-        
-        free(pdu_l6);
-
-        return dati_enc; 
-    } else {
-        printf("[6] Presentation RECV ERROR: Header L6 '[PRES][ENC=ROT13]' not found. PDU received  from L5: \"%s...\"\n", pdu_l6);
-        free(pdu_l6);
-        return NULL;
-    }
+    return decoded_sdu;
 }

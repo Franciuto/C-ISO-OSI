@@ -10,7 +10,4 @@ char* livello6_receive(const char* pdu);
 // Fucntions to encrypt/decrypt
 char* rot13_encrypt(const char* input);
 char* rot13_decrypt(const char* input);
-// Funtions to encode/decode using base64
-char* base64_encode(const char* input);
-char* base64_decode(const char* input);
 #endif

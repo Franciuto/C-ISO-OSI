@@ -1,4 +1,4 @@
-/* C-ISO-OSI - Presentation layer - Franciuto
+/* C-ISO-OSI - Presentation layer - Fontanesi
 
     - Responsible for data translation and encryption (ROT13 only).
     - Converts data from the application layer into a common format for transmission.
@@ -92,17 +92,25 @@ char* livello6_send(const char* dati, const char* enc_type) {
     return risultato_da_l5;
 }
 
+/* Function - livello6_receive()
+    Handle receive request for level 6
+    -- INPUT --
+       -> dati: PDU from the caller (level5)
+    -- OUTPUT --
+       -> Decoded content for perfect usage by level 7
+*/
 char* livello6_receive(const char* sdu_from_l5) {
     // Header to append definition
     const char* pres_header_tag = "[PRES][ENC=ROT13]";
     const char* payload_ptr;
     char* decoded_sdu;
 
+    // store the entire message
     payload_ptr = sdu_from_l5 + strlen(pres_header_tag);
-    printf("[6] Presentation RECV - Found ROT13 header. Encoded payload: \"%s\"\n", payload_ptr);
     
+    // Decode message and print result
     decoded_sdu = rot13_decrypt(payload_ptr); 
-    printf("[6] Presentation RECV - ROT13 decoded to: \"%s\"\n", decoded_sdu);
+    printf("[6] Presentation ROT13 PDU decoded to: \"%s\"\n", decoded_sdu);
     
     return decoded_sdu;
 }

@@ -1,4 +1,4 @@
-/* C-ISO-OSI - Presentation layer - Functions */
+/* C-ISO-OSI - Presentation layer - Fontanesi */
 
 // Include guard
 #ifndef LEVEL6_PRESENTATION_H

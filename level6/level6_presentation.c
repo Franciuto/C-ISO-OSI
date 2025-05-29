@@ -1,4 +1,4 @@
-/* C-ISO-OSI - Presentation layer - Functions
+/* C-ISO-OSI - Presentation layer - Franciuto
 
     - Responsible for data translation and encryption (ROT13 only).
     - Converts data from the application layer into a common format for transmission.
@@ -18,13 +18,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/* Function - rot13_encypt()
+    Produces a copy of the passed string rotated by 13 positions in the alphabeth
+    -- INPUT --
+       -> String to be rotated
+
+    -- OUTPUT --
+       -> String rotated
+*/
 char* rot13_encrypt(const char* input) {
     if (input == NULL) return NULL;
     char* output = strdup(input);
-    if (output == NULL) {
-        perror("Failed to allocate memory in rot13_encrypt");
-        return NULL;
-    }
     for (int i = 0; output[i] != '\0'; i++) {
         char c = output[i];
         if (c >= 'A' && c <= 'Z') {
@@ -36,77 +40,69 @@ char* rot13_encrypt(const char* input) {
     return output;
 }
 
-char* rot13_decrypt(const char* input){
-    // ROT13 is its own inverse
+/* (dumb)Function - rot13_decrypt()
+    Decrypt rot13 string
+    -- INPUT --
+       -> String to be decrypted
+
+    -- OUTPUT --
+       -> String decrypted
+*/
+char* rot13_decrypt(const char* input){    
+    // Call rot 13 encrypt because rotating a string again by 13 we obtain the original message
     return rot13_encrypt(input);
 }
 
-char* livello6_send(const char* dati, const char* enc_type) {
-    printf("[6] Presentation - Datas from L7: %s\n", dati);
+/* Function - livello6_send()
+    Handle send request for level 6
+    -- INPUT --
+       -> dati: PDU from the caller (level7)
+       -> enc_type: Type of encryption to be performed {"active" : "ROT13", "To develop" : "Base64, Hash"}
 
-    // Validate encryption type
+    -- OUTPUT --
+       -> String decrypted
+*/
+char* livello6_send(const char* dati, const char* enc_type) {
+    // Check for enc_type
     if (strcmp(enc_type, "ROT13") != 0) {
-        fprintf(stderr, "[6] Presentation ERROR: Unsupported encoding type '%s'. Only ROT13 is supported.\n", enc_type);
+        printf("Invalid encoding: %s Only ROT13 supprted at the moment", enc_type);
         return NULL;
     }
 
+    // Data encryption
     char* dati_enc = rot13_encrypt(dati);
+    // Header definition (Rot13 hard coded for now)
     const char* header_l6_str = "[PRES][ENC=ROT13]";
 
-    size_t header_len = strlen(header_l6_str);
-    size_t enc_len = dati_enc ? strlen(dati_enc) : 0;
+    // Calculate sizes
+    int header_len = strlen(header_l6_str);
+    int enc_len = dati_enc ? strlen(dati_enc) : 0; // If dati_enc != NULL => enc_len = strlen(dati_enc) else enc_len = 0
     
-    // Check for encryption failure
-    if (dati_enc == NULL) {
-        fprintf(stderr, "[6] Presentation ERROR: ROT13 encryption failed\n");
-        return NULL;
-    }
-
+    // Declare some space to store the final PDU
     char* pdu_l6 = (char*)malloc(header_len + enc_len + 1);
-    if (!pdu_l6) {
-        fprintf(stderr, "[6] Presentation ERROR: Memory allocation failed\n");
-        free(dati_enc);
-        return NULL;
-    }
 
+    // Compose the final PDU
     strcpy(pdu_l6, header_l6_str);
     strcat(pdu_l6, dati_enc);
-    
-    printf("[6] Presentation - PDU L6 created: \"%s\"\n", pdu_l6);
     free(dati_enc); 
 
+    // Call level5 using normal
     char* risultato_da_l5 = livello5_send(pdu_l6, "NORMAL"); 
     free(pdu_l6);
     return risultato_da_l5;
 }
 
 char* livello6_receive(const char* sdu_from_l5) {
-    printf("[6] Presentation RECV - Starting processing of SDU from L5\n");
-    printf("[6] Presentation RECV - Input SDU: \"%s\"\n", sdu_from_l5);
-
-    if (sdu_from_l5 == NULL) {
-        printf("[6] Presentation RECV ERROR: Received NULL SDU\n");
-        return NULL;
-    }
-
+    // Header to append definition
     const char* pres_header_tag = "[PRES][ENC=ROT13]";
-    const char* payload_ptr = NULL;
-    char* decoded_sdu = NULL;
+    const char* payload_ptr;
+    char* decoded_sdu;
 
-    if (strncmp(sdu_from_l5, pres_header_tag, strlen(pres_header_tag)) == 0) {
-        payload_ptr = sdu_from_l5 + strlen(pres_header_tag);
-        printf("[6] Presentation RECV - Found ROT13 header. Encoded payload: \"%s\"\n", payload_ptr);
-        
-        decoded_sdu = rot13_decrypt(payload_ptr); 
-        if (!decoded_sdu) {
-            fprintf(stderr, "[6] Presentation RECV ERROR: ROT13 decoding failed\n");
-            return NULL; 
-        }
-        printf("[6] Presentation RECV - ROT13 decoded to: \"%s\"\n", decoded_sdu);
-    } else {
-        fprintf(stderr, "[6] Presentation RECV ERROR: Missing or invalid ROT13 header\n");
-        return NULL; 
-    }
+    payload_ptr = sdu_from_l5 + strlen(pres_header_tag);
+    printf("[6] Presentation RECV - Found ROT13 header. Encoded payload: \"%s\"\n", payload_ptr);
+    
+    decoded_sdu = rot13_decrypt(payload_ptr); 
+    printf("[6] Presentation RECV - ROT13 decoded to: \"%s\"\n", decoded_sdu);
     
     return decoded_sdu;
 }

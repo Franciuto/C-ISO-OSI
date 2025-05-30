@@ -4,12 +4,12 @@
 #ifndef LEVEL1_FISIC_H
 #define LEVEL1_FISIC_H
 
-// Initialize the physical layer FIFO queue and buffers
+// Initialize fifo
 void livello1_init();
 
-// transmits the bit frame
+// Handle send reqeust for level1
 void livello1_send(const char* bitstream);
-// reads the bit frame from the transmission medium
+// Handle receive request for level1
 char* livello1_receive();
 
 #endif

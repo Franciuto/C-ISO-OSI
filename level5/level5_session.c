@@ -14,6 +14,7 @@ char* livello5_send(const char* dati, const char* action) {
     static int sess_id = -1; // static session ID for coerence
     if (strcmp(action, "INIT") == 0){
         sess_id = rand() % 10000 + 1; // generate dinamic ID between 1 and 10000
+        
         snprintf(header_buffer, sizeof(header_buffer), "[SESS] [INIT] [ID = %d]", sess_id);     // print and copy into the header_buffer
     }
     else if(strcmp(action, "CLOSE") == 0){
@@ -27,8 +28,8 @@ char* livello5_send(const char* dati, const char* action) {
     size_t total_len = strlen(header_buffer) + strlen(dati) + 1;
     char* pack = malloc(total_len);
     snprintf(pack, total_len, "%s%s", header_buffer, dati);
-
-    return livello4_send(pack);
+    livello4_send(pack);
+    return pack;
 }
 
 char* livello5_receive(const char* pdu) {
@@ -74,7 +75,8 @@ char* livello5_receive(const char* pdu) {
     int scanned = sscanf(id_part, "[ID= %d]", &sess_id);
     
     printf("[Livello 5 - Sessione] RECV: Azione '%s', ID sessione %d\n", action, sess_id);
-    static int current_session_id = -1;
+    static int current_session_id = 0;
+    current_session_id = sess_id;
     if (strcmp(action, "INIT") == 0) {
         current_session_id = sess_id;
     } else if (current_session_id != sess_id) {

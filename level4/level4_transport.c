@@ -78,7 +78,7 @@ char* livello4_send(const char* sdu_from_l5) {
         
         snprintf(pdu_buffer, PDU_SIZE, "%s%.*s", header_l4, (int)current_payload_len, sdu_from_l5 + current_payload_offset);
 
-        printf("[4] Trasporto SEND - Invio PDU (ID=%02d, Frag=%d/%d) a L3: \"%.30s...\"\n", current_id, k + 1, num_fragments, pdu_buffer);
+        printf("[4] Trasporto SEND - Invio PDU (ID=%02d, Frag=%d/%d) a L3: \"%s...\"\n", current_id, k + 1, num_fragments, pdu_buffer);
         
         livello3_send(pdu_buffer);
 

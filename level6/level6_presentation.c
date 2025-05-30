@@ -10,7 +10,6 @@
 
 /* LIBRARY HEADERS */
 #include "constants.h"  // Library constants
-#include "level6_presentation.h"
 #include "level5_session.h"
 
 /* STANDARD HEADERS */
@@ -18,15 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* Function - rot13_encypt()
-    Produces a copy of the passed string rotated by 13 positions in the alphabeth
-    -- INPUT --
-       -> String to be rotated
-
-    -- OUTPUT --
-       -> String rotated
-*/
-char* rot13_encrypt(const char* input) {
+char* rot13(const char* input) {
     if (input == NULL) return NULL;
     char* output = strdup(input);
     for (int i = 0; output[i] != '\0'; i++) {
@@ -38,19 +29,6 @@ char* rot13_encrypt(const char* input) {
         }
     }
     return output;
-}
-
-/* (dumb)Function - rot13_decrypt()
-    Decrypt rot13 string
-    -- INPUT --
-       -> String to be decrypted
-
-    -- OUTPUT --
-       -> String decrypted
-*/
-char* rot13_decrypt(const char* input){    
-    // Call rot 13 encrypt because rotating a string again by 13 we obtain the original message
-    return rot13_encrypt(input);
 }
 
 /* Function - livello6_send()
@@ -70,7 +48,7 @@ char* livello6_send(const char* dati, const char* enc_type) {
     }
 
     // Data encryption
-    char* dati_enc = rot13_encrypt(dati);
+    char* dati_enc = rot13(dati);
     // Header definition (Rot13 hard coded for now)
     const char* header_l6_str = "[PRES][ENC=ROT13]";
 
@@ -109,7 +87,7 @@ char* livello6_receive(const char* sdu_from_l5) {
     payload_ptr = sdu_from_l5 + strlen(pres_header_tag);
     
     // Decode message and print result
-    decoded_sdu = rot13_decrypt(payload_ptr); 
+    decoded_sdu = rot13(payload_ptr); 
     printf("[6] Presentation ROT13 PDU decoded to: \"%s\"\n", decoded_sdu);
     
     return decoded_sdu;

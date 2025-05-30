@@ -8,6 +8,5 @@
 char* livello6_send(const char* dati, const char* enc_type);
 char* livello6_receive(const char* pdu);
 // Fucntions to encrypt/decrypt
-char* rot13_encrypt(const char* input);
-char* rot13_decrypt(const char* input);
+char* rot13(const char* input);
 #endif

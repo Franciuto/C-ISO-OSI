@@ -27,7 +27,11 @@ void livello1_send(const char* bitstream) {
     printf("[L1] Physical - Stored in FIFO: %s\n", bitstream);
     
     // Update pointer
-    fifo_tail = (fifo_FIFOe() {
+    fifo_tail = (fifo_tail + 1) % FIFO_SIZE;
+    fifo_count++;
+}
+
+char* livello1_receive() {
     // Pop from fifo
     char* data = fifo[fifo_head];
     

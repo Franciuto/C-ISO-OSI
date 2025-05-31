@@ -1,0 +1,7 @@
+*.o
+osi_simulation
+.gdb_history
+.vscode/*
+.vscode
+Consegna.md
+*/*.o

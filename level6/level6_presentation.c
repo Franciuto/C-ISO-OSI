@@ -42,7 +42,6 @@ char* rot13(const char* input) {
 */
 char* livello6_send(const char* dati, const char* enc_type) {
     printf("[6] Presentation - Message to send: %s\n", dati);
-    livello5_send("", "INIT");
     printf("\n\n");
     // Check for enc_type
     if (strcmp(enc_type, "ROT13") != 0) {
@@ -67,8 +66,6 @@ char* livello6_send(const char* dati, const char* enc_type) {
     free(dati_enc);
     char *p6 = livello5_send(pdu_l6, "NORMAL");
     printf("\n\n");
-    livello5_send("", "CLOSE");
-    // Call level5 using normal
     return p6;
 }
 

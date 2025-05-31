@@ -1,4 +1,4 @@
-/* C-ISO-OSI - Application layer - Functions
+/* C-ISO-OSI - Application layer - Functions - Fornari Giordano after 4 cups of coffe at 05:54
 
     - Receives input from the user and displays output, typically in the form of text, images, commands.
     - Allows the application to use network protocols (such as HTTP, FTP, SMTP, DNS).
@@ -19,7 +19,7 @@
 #include <string.h>
 
 char* livello7_send(const char* dati) {
-    printf("\n───────────────────────────────────────────────── ISO/OSI Send stack ────────────────────────────────────────\n\n[7] Application - Message to send: %s\n", dati);
+    printf("\n───────────────────────────────────────────────── ISO/OSI Send stack ────────────────────────────────────────\n\n[7] Application - Message da inviare: %s\n", dati);
     livello6_send(dati, "ROT13");
     return dati;
 }
@@ -31,7 +31,7 @@ char* livello7_receive() {
     
     if (result != NULL) {
         if (strlen(result) > 0) {
-            printf("[7] Application - ✅ Message successfully transmitted and decoded through all ISO/OSI layers\n\n\n");
+            printf("[7] Application - ✅ Il messagio è stato trasmesso senza errori! \n\n\n");
         }
     }    
     return result;

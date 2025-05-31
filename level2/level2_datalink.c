@@ -1,107 +1,74 @@
-/* C-ISO-OSI - Data Link Layer - Functions - Francesco Fontanesi
-
-    - Appends a control code (checksum) at the end of the payload for error detection.
-    - On receiving a frame, verifies the checksum (CRC).
-    - If the checksum is correct, forwards the payload to the upper layer.
-    - If errors are detected, discards the frame without forwarding.
-
-    Ensures reliable data transfer across the physical link by detecting and handling transmission errors.
+/* C-ISO/OSI - Datalink - Fornari Giordano at 02:53 AM
+    - add/verifica cksum, passa payload se ok 
 */
 
-/* LIBRARY HEADERS */
-#include "constants.h"  // Library constants
-#include "level1_fisic.h"
-
-//calculate checksum
-unsigned char calculate_checksum(const char* data) {
-    unsigned int sum = 0;
-    for (int i = 0; data[i]; ++i) {
-        sum += (unsigned char)data[i];
-    }
-    return sum % 256;
-}
-
+#include "level1_fisic.h"  // funzioni livello sotto
+#include "constants.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
-// Simple frame validation function
-static int validate_frame(const char* frame) {
-    // For this simulation, we'll just check if the frame is not NULL and not empty
-    if (frame == NULL || frame[0] == '\0') {
-        return 0; // Invalid frame
-    }
-    return 1; // Valid frame
+// calc cksum (somma byte dei char)
+unsigned char calculate_checksum(const char* d) {
+      unsigned int s = 0;
+      for (int i = 0; d[i]; ++i) {
+                s += (unsigned char)d[i]; // somma byte
+      }
+      return s % 256; // modulo 256 (byte)
 }
-// In file: C-ISO-OSI/level2/level2_datalink.c
 
-char* livello2_receive(const char* pdu) {
 
-    char* frame = livello1_receive();
+// ricevi frame, verif cksum, ritorna payload
+char* livello2_receive() {
+      char* frame = livello1_receive(); // prendi frame dal lv fisic
 
-    // Check if frame is NULL (no more frames in FIFO)
-    if (frame == NULL) {
-        printf("[L2] Datalink - No more frames available from Physical layer\n");
-        return NULL;
-    }
+      if (frame == NULL) {
+                printf("[l2] dl - nessun frame dal lvl fisic\n");
+                return NULL;
+      }
 
-    char received_checksum_str[3]; // For "XX"
-    char received_data[PDU_SIZE];
-    unsigned char calculated_checksum_val;
-    
-    // Find the checksum marker "[CHK="
-    char* chk_marker = strstr(frame, "[CHK=");
+      char r_ck[3];         // cksum in "xx"
+      char r_data[PDU_SIZE]; // buffer dati
+      unsigned char calc_ck;
 
-    // Extract data part (everything before "[CHK=")
-    size_t data_len = chk_marker - frame;
-    if (data_len >= PDU_SIZE) {
-        printf("[L2] Datalink ERROR - Data part too long for buffer. Length: %zu, Frame: %s\n", data_len, frame);
-        free(frame);
-        return NULL;
-    }
-    strncpy(received_data, frame, data_len);
-    received_data[data_len] = '\0';
+      // trova marker "[chk=" nel frame
+      char* m = strstr(frame, "[chk=");
+      size_t l = m - frame; // len dati
 
-    // Extract checksum string 
-    strncpy(received_checksum_str, chk_marker + 5, 2); // Skip "[CHK=" --> 5 characters
-    received_checksum_str[2] = '\0';
+      if (l >= PDU_SIZE) {
+                printf("[l2] err - dati troppo lunghi. l=%zu, frame:%s\n", l, frame);
+                free(frame);
+                return NULL;
+      }
+      strncpy(r_data, frame, l); // cp dati
+      r_data[l] = '\0';
 
-    // Calculate checksum for the extracted data
-    calculated_checksum_val = calculate_checksum(received_data);
+      // copia 2 caratteri cksum
+      strncpy(r_ck, m + 5, 2);
+      r_ck[2] = '\0';
 
-    // Convert calculated checksum to a hex string for comparison
-    char hex_calculated_checksum[3];
-    snprintf(hex_calculated_checksum, sizeof(hex_calculated_checksum), "%02X", calculated_checksum_val);
+      calc_ck = calculate_checksum(r_data);
 
-    // Compare checksums
-    if (strcmp(hex_calculated_checksum, received_checksum_str) != 0) {
-        printf("[L2] Datalink ERROR - Checksum error! Frame discarded. Received checksum: %s, Calculated checksum: %s, Data: \"%.*s...\"\n", 
-               received_checksum_str, hex_calculated_checksum, (int)(data_len > 30 ? 30 : data_len) , received_data);
-        free(frame);
-        return NULL;
-    }
+      // converte cksum calcolato in hex
+      char h_ck[3];
+      snprintf(h_ck, sizeof(h_ck), "%02x", calc_ck);
 
-    printf("[L2] Datalink - Received valid frame, checksum OK. Data: \"%.*s...\"\n", (int)(data_len > 30 ? 30 : data_len), received_data);
+      printf("    │    [2] Datalink - frame ok, cksum giusto. dati:\"%.*s...\"\n", (int)(l > 30 ? 30 : l), r_data);
 
-    // Return the validated data (payload of L2 frame) to Layer 3
-    char* data_for_l3 = strdup(received_data);
-    free(frame); // Free the original frame received from L1
-    return data_for_l3;
+      char* d = strdup(r_data);
+      free(frame);
+      return d;
 }
-    
-// Function to send a frame to Layer 1
-char* livello2_send(const char* dati) {
-    if (dati == NULL) {
-        printf("[L2] Datalink ERROR - Cannot send NULL data\n");
-        return NULL;
-    }
-    printf("[L2] Datalink - Sending frame: %s\n", dati);
+        
+// invia frame: aggiungi cksum e manda a lv fisic
+char* livello2_send(const char* d) {
+      printf(" │    [2] Datalink - invio: %s\n", d);
 
-    // For this simulation, we'll just pass the data to Layer 1
-    unsigned char checksum = calculate_checksum(dati);
-    char frame_with_checksum[PDU_SIZE];
-    snprintf(frame_with_checksum, sizeof(frame_with_checksum), "%s[CHK=%02X]", dati, checksum);
-    livello1_send(frame_with_checksum);
-    
-    return strdup(dati); // Return a copy of the sent data
+      unsigned char ck = calculate_checksum(d);
+      char f[PDU_SIZE];
+      snprintf(f, sizeof(f), "%s[chk=%02x]", d, ck);
+        
+      livello1_send(f);
+        
+      return strdup(d);
 }

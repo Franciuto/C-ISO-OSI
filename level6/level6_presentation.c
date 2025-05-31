@@ -41,14 +41,16 @@ char* rot13(const char* input) {
        -> String decrypted
 */
 char* livello6_send(const char* dati, const char* enc_type) {
+    printf("[6] Presentation - Message to send: %s\n", dati);
     livello5_send("", "INIT");
+    printf("\n\n");
     // Check for enc_type
     if (strcmp(enc_type, "ROT13") != 0) {
         printf("Invalid encoding: %s Only ROT13 supprted at the moment", enc_type);
         return NULL;
     }
     // Data encryption
-    char* dati_enc = rot13(dati);
+    char *dati_enc = rot13(dati);
     // Header definition (Rot13 hard coded for now)
     const char* header_l6_str = "[PRES][ENC=ROT13]";
 
@@ -62,8 +64,9 @@ char* livello6_send(const char* dati, const char* enc_type) {
     // Compose the final PDU
     strcpy(pdu_l6, header_l6_str);
     strcat(pdu_l6, dati_enc);
-    free(dati_enc); 
+    free(dati_enc);
     char *p6 = livello5_send(pdu_l6, "NORMAL");
+    printf("\n\n");
     livello5_send("", "CLOSE");
     // Call level5 using normal
     return p6;
@@ -76,19 +79,19 @@ char* livello6_send(const char* dati, const char* enc_type) {
     -- OUTPUT --
        -> Decoded content for perfect usage by level 7
 */
-char* livello6_receive(const char* sdu_from_l7) {
+char* livello6_receive() {
     // Header to append definition
-    char *sdu_l5 = livello5_receive(sdu_from_l7);
+    char *sdu_l5 = livello5_receive();
     const char* pres_header_tag = "[PRES][ENC=ROT13]";
     const char* payload_ptr;
     char* decoded_sdu;
 
     // store the entire message
-    payload_ptr = sdu_from_l7 + strlen(pres_header_tag);
+    payload_ptr = sdu_l5 + strlen(pres_header_tag);
     
     // Decode message and print result
     decoded_sdu = rot13(payload_ptr); 
-    printf("[6] Presentation ROT13 PDU decoded to: \"%s\"\n", decoded_sdu);
+    printf("\033[2A[6] Presentation ROT13 PDU decoded to: \"%s\"\n", decoded_sdu);
     
-    return sdu_l5;
+    return decoded_sdu;
 }

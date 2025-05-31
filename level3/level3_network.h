@@ -22,6 +22,6 @@ char *livello3_send(const char *dati);
     -- OUTPUT --
        -> Sends the data to layer 2
 */
-char *livello3_receive(const char *pdu);
+char *livello3_receive();
 
 #endif

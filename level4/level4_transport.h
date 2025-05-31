@@ -11,6 +11,6 @@ void livello4_init();
 char* livello4_send(const char* dati);
 
 // Receive data from the transport layer
-char* livello4_receive(const char* pdu);
+char* livello4_receive();
 
 #endif

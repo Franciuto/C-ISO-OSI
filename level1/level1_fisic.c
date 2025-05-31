@@ -1,7 +1,7 @@
 /* C-ISO-OSI - Physical layer - Franciuto */
 
 // LIBRARY HEADERS
-#include "constants.h"  // Library constants
+#include "constants.h"  // pdu size
 #include "level1_fisic.h"
 
 // STANDARD HEADERS
@@ -11,20 +11,20 @@
 
 #define FIFO_SIZE 16
 
-// FIFO initialization
+// FIFO init
 static char* fifo[FIFO_SIZE];
 static int fifo_head = 0;
 static int fifo_tail = 0;
 static int fifo_count = 0;
 
-// Current pointing pos
+// pointing pos
 static int current_recv_pos = 0;
 
 void livello1_send(const char* bitstream) {
-   // FIll the fifo with bitstream
+   // fill the fifo with bitstream
     fifo[fifo_tail] = strdup(bitstream);
     
-    printf("[L1] Physical - Stored in FIFO: %s\n", bitstream);
+    printf(" │    [1] Physical - Stored in FIFO: %s\n", bitstream);
     
     // Update pointer
     fifo_tail = (fifo_tail + 1) % FIFO_SIZE;
@@ -32,19 +32,19 @@ void livello1_send(const char* bitstream) {
 }
 
 char* livello1_receive() {
-    // Pop from fifo
+    // pop from fifo
     char* data = fifo[fifo_head];
     
-    // Update FIFO pointers
+    // FIFO pt
     fifo_head = (fifo_head + 1) % FIFO_SIZE;
     fifo_count--;
     
-    printf("[L1] Physical - POP from FIFO: %s\n", data);
+    printf("    │    [1] Physical - POP from FIFO: %s\n", data);
     
     return data;
 }
 
-// Initialization for level1
+// init for level1
 void livello1_init() {
     // Clear the fifo
     for (int i = 0; i < FIFO_SIZE; i++) {
@@ -54,7 +54,7 @@ void livello1_init() {
         }
     }
     
-    // Reset fifo pointer
+    // reset fifo pt
     fifo_head = 0;
     fifo_tail = 0;
     fifo_count = 0;

@@ -6,7 +6,7 @@
 
 // Layer functions
 char* livello6_send(const char* dati, const char* enc_type);
-char* livello6_receive(const char* pdu);
+char* livello6_receive();
 // Fucntions to encrypt/decrypt
 char* rot13(const char* input);
 #endif

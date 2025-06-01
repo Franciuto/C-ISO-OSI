@@ -9,7 +9,7 @@
 #include <string.h>
 
 char* livello5_send(const char* dati, const char* action) {
-    printf("[5] - sessione send: ricevuto payload: '%s', azione: '%s'\n", dati, action);
+    printf("[5] - Session SEND: ricevuto payload: '%s', azione: '%s'\n", dati, action);
     char header_buffer[128];                // creazione dell'header per il livello sessione
     static int sess_id = -1; // id di sessione statico per coerenza
     if (strcmp(action, "INIT") == 0) {
@@ -58,12 +58,9 @@ char* livello5_receive() {
     sscanf(id_part, "[ID=%d]", &sess_id);
     
     printf("[5] - Sessione RECV: azione '%s', id sessione %d\n\n\n", action, sess_id);
-    static int current_session_id = 0;
     if (strcmp(action, "INIT") == 0) {
-        current_session_id = sess_id; // id di sessione corrente
         return livello5_receive();
     } else if (strcmp(action, "CLOSE") == 0) {
-        current_session_id = -1;
     }
     
     // individua la fine della sezione id

@@ -1,4 +1,7 @@
-/* C-ISO-OSI - Transport layer - Functions - Fornari Giordano and Giorgia Folloni*/
+/* 
+C-ISO-OSI - Transport layer - Functions - Fornari Giordano at 04:48 after a blank night and 4 cupp of coffe and a redbull
+*/
+
 #include "constants.h" // per pdu_size
 #include "level3_network.h" // per il livello sottostante
 
@@ -15,7 +18,7 @@ static int transport_pdu_id_counter = 1; // id del pdu, static perchè visibile 
 static int msg_ids[MAX_MESSAGES] = {-1};                            // ID dei messaggi
 static int msg_total_fragments[MAX_MESSAGES] = {0};                 // il numero di frsmmenti per ogni messaggio
 static int msg_fragments_received[MAX_MESSAGES] = {0};              // frammenti ricevuti
-static int msg_in_use[MAX_MESSAGES] = {0};                          // array di flag per tracciare ??
+static int msg_in_use[MAX_MESSAGES] = {0};                          // array di flag per tracciare
 static char *msg_fragments[MAX_MESSAGES][MAX_FRAGMENTS] = {{NULL}}; // array di frammenti per ogni messaggio
 
 

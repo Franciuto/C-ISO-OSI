@@ -20,7 +20,7 @@
 
 char *livello3_send(const char *dati)
 {
-    const char *header = "[SRC=192.168.1.7] [DST=192.168.1.45] ";
+    const char *header = "[NET][SRC=192.168.1.7][DST=192.168.1.45]";
     
     // len calcs
     int header_len = strlen(header);

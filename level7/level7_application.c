@@ -1,4 +1,4 @@
-/* C-ISO-OSI - Application layer - Functions - Fornari Giordano after 4 cups of coffe at 05:54
+/* C-ISO-OSI - Application layer - Functions - Fornari Giordano at 05:54
 
     - Receives input from the user and displays output, typically in the form of text, images, commands.
     - Allows the application to use network protocols (such as HTTP, FTP, SMTP, DNS).
